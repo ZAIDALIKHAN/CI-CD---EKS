@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_REGION = 'us-east-1'
-        ECR_REPO = '069380454032.dkr.ecr.us-east-1.amazonaws.com/myapp'
+        ECR_REPO = '069380454032.dkr.ecr.us-east-1.amazonaws.com/terraform-cicd-app'
         IMAGE_NAME = 'myapp'
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         CLUSTER_NAME = 'demo-cluster'
@@ -13,7 +13,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "Cloning repository..."
-                git branch: 'main', url: 'https://github.com/ZAIDALIKHAN/Jenkins-CI-CD-Docker-Terraform-Ansible.git'
+                git branch: 'main', url: 'https://github.com/ZAIDALIKHAN/CI-CD---EKS.git'
             }
         }
 
@@ -41,36 +41,12 @@ pipeline {
             }
         }
 
-        stage('Configure kubectl') {
-            steps {
-                sh '''
-                echo "Configuring kubectl for EKS..."
-                aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
-                kubectl get nodes
-                '''
-            }
-        }
-
-        stage('Deploy to EKS') {
-            steps {
-                sh '''
-                    echo "Deploying to EKS cluster..."
-                    sed -i "s|069380454032.dkr.ecr.us-east-1.amazonaws.com/myapp:.*|069380454032.dkr.ecr.us-east-1.amazonaws.com/myapp:${IMAGE_TAG}|g" k8/deployment.yaml
-
-                    kubectl apply -f k8/deployment.yaml
-                    kubectl apply -f k8/service.yaml
-
-                    echo "Waiting for LoadBalancer..."
-                    sleep 30
-                    kubectl get svc myapp-service
-                '''
-            }
-        }
-    }
+        
+                    
 
     post {
         success {
-            echo "✅ EKS deployment successful!"
+            echo "✅ ECR Push successful!"
         }
         failure {
             echo "❌ Pipeline failed! Check Jenkins console logs."
