@@ -44,7 +44,7 @@ pipeline {
         stage('Create EKS'){
             steps {
                 sh '''
-                ⁠/usr/local/bin/eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --fargate
+                ⁠/usr/bin/env /usr/local/bin/eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --fargate
                 ⁠/usr/local/bin/eksctl utils associate-iam-oidc-provider --cluster $CLUSTER_NAME --approve
                 '''
             }
