@@ -35,8 +35,10 @@ pipeline {
         stage('Tag & Push to ECR') {
             steps {
                 sh '''
-                docker tag $IMAGE_NAME:latest $ECR_REPO:$IMAGE_TAG
-                docker push $ECR_REPO:$IMAGE_TAG
+                docker tag $IMAGE_NAME:latest $ECR_REPO:${buildTag}
+                docker tag $IMAGE_NAME:latest $ECR_REPO:latest
+                docker push $ECR_REPO:${buildTag}
+                docker push $ECR_REPO:latest
                 '''
             }
         }
