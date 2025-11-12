@@ -6,7 +6,7 @@ pipeline {
         ECR_REPO = '069380454032.dkr.ecr.us-east-1.amazonaws.com/terraform-cicd-app'
         IMAGE_NAME = 'myapp'
         IMAGE_TAG = "build-${BUILD_NUMBER}"
-        CLUSTER_NAME = 'demo-cluster'
+        CLUSTER_NAME = 'demo-clusteree'
     }
 
     stages {
