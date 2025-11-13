@@ -87,9 +87,91 @@ pipeline {
                 echo "Creating Fargate profile 'alb-sample-app'..."
                 eksctl create fargateprofile --cluster $CLUSTER_NAME --region $AWS_REGION --name alb-sample-app --namespace game-2048
                fi
+
+               
+               
                '''
             }
         }
+
+
+        stage('Setup AWS Load Balancer Controller') {
+    steps {
+        sh '''
+        set -e
+
+        echo "=== Step 1: Download IAM Policy for ALB Controller ==="
+        if [ ! -f iam_policy.json ]; then
+          curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.11.0/docs/install/iam_policy.json
+        else
+          echo " iam_policy.json already exists. Skipping download."
+        fi
+
+
+        echo "=== Step 2: Create IAM Policy (if not exists) ==="
+        POLICY_ARN="arn:aws:iam::${AWS_ACCOUNT_ID:-069380454032}:policy/AWSLoadBalancerControllerIAMPolicy"
+        if aws iam get-policy --policy-arn "$POLICY_ARN" >/dev/null 2>&1; then
+          echo " IAM Policy already exists. Skipping creation."
+        else
+          echo "Creating IAM Policy..."
+          aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json
+        fi
+
+
+        echo "=== Step 3: Create IAM Service Account (if not exists) ==="
+        if eksctl get iamserviceaccount --cluster=$CLUSTER_NAME --region=$AWS_REGION -n kube-system | grep -q aws-load-balancer-controller; then
+          echo "IAM Service Account already exists. Skipping creation."
+        else
+          echo " Creating IAM Service Account..."
+          eksctl create iamserviceaccount \
+            --cluster=$CLUSTER_NAME \
+            --namespace=kube-system \
+            --name=aws-load-balancer-controller \
+            --role-name AmazonEKSLoadBalancerControllerRole \
+            --attach-policy-arn=$POLICY_ARN \
+            --approve
+        fi
+
+
+        echo "=== Step 4: Add and Update Helm Repo ==="
+        if ! helm repo list | grep -q eks; then
+          helm repo add eks https://aws.github.io/eks-charts
+        else
+          echo " Helm repo 'eks' already exists."
+        fi
+        helm repo update eks
+
+
+        echo "=== Step 5: Install or Upgrade AWS Load Balancer Controller via Helm ==="
+        if helm list -n kube-system | grep -q aws-load-balancer-controller; then
+          echo "Helm release already exists. Upgrading..."
+          helm upgrade aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system \
+            --set clusterName=$CLUSTER_NAME \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set region=$AWS_REGION \
+            --set vpcId=vpc-0b4e0f2a04d59efad
+        else
+          echo " Installing Helm chart for AWS Load Balancer Controller..."
+          helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system \
+            --set clusterName=$CLUSTER_NAME \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set region=$AWS_REGION \
+            --set vpcId=vpc-0b4e0f2a04d59efad
+        fi
+
+
+        echo "=== Step 6: Verify Deployment ==="
+        kubectl rollout status deployment/aws-load-balancer-controller -n kube-system --timeout=180s || true
+        kubectl get deployment -n kube-system aws-load-balancer-controller
+        '''
+    }
+}
+
+
+
+        
             
 
     }
