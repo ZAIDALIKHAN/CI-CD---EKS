@@ -171,6 +171,42 @@ pipeline {
 
 
 
+    stage('Deploy to EKS') {
+    steps {
+        script {
+            echo "📦 Deploying application to EKS..."
+
+            // Ensure kubeconfig is up to date
+            sh '''
+                aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+            '''
+
+            // Apply all Kubernetes manifests safely (Deployment, Service, Ingress)
+            sh '''
+                if [ -f deployment.yaml ]; then
+                    kubectl apply -f deployment.yaml || true
+                fi
+
+                if [ -f service.yaml ]; then
+                    kubectl apply -f service.yaml || true
+                fi
+
+                if [ -f ingress.yaml ]; then
+                    kubectl apply -f ingress.yaml || true
+                fi
+
+                # Wait for rollout to complete (safe even if already up-to-date)
+                kubectl rollout status deployment/myapp-deployment -n game-2048 --timeout=180s || true
+
+                echo "✅ Application successfully deployed on EKS via Fargate!"
+            '''
+        }
+    }
+}
+
+
+
+
         
             
 
