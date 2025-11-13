@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+  namespace: game-2048
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "alb"  #Faster and stable for EKS
+spec:
+  type: LoadBalancer
+  selector:
+    app: myapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
