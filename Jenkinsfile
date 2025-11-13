@@ -174,11 +174,16 @@ pipeline {
     stage('Deploy to EKS') {
     steps {
         script {
-            echo "📦 Deploying application to EKS..."
+            echo "Deploying application to EKS..."
 
             // Ensure kubeconfig is up to date
             sh '''
                 aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+            '''
+
+            sh '''
+                echo "Ensuring namespace 'game-2048' exists..."
+                kubectl get namespace game-2048 || kubectl create namespace game-2048
             '''
 
             // Apply all Kubernetes manifests safely (Deployment, Service, Ingress)
@@ -198,7 +203,7 @@ pipeline {
                 # Wait for rollout to complete (safe even if already up-to-date)
                 kubectl rollout status deployment/myapp-deployment -n game-2048 --timeout=180s || true
 
-                echo "✅ Application successfully deployed on EKS via Fargate!"
+                echo " Application successfully deployed on EKS via Fargate!"
             '''
         }
     }
@@ -215,10 +220,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ ECR Push successful!"
+            echo " ECR Push successful!"
         }
         failure {
-            echo "❌ Pipeline failed! Check Jenkins console logs."
+            echo "Pipeline failed! Check Jenkins console logs."
         }
         always {
             cleanWs()
