@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deployment
+  namespace: game-2048
+  labels:
+    app: myapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      #  Add this if you are using Fargate profile (important)
+      # Fargate uses namespace-based profiles. Default namespace is "default"
+      # You can add tolerations if using specific Fargate selectors
+      containers:
+        - name: myapp
+          image: 069380454032.dkr.ecr.us-east-1.amazonaws.com/terraform-cicd-app:latest
+
+          ports:
+            - containerPort: 5000
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          env:
+            - name: FLASK_ENV
+              value: "production"
