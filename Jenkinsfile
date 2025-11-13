@@ -57,11 +57,30 @@ pipeline {
         }
 
 
-        stage('Create EKS') {
+      stage('Create or Verify EKS Cluster') {
             steps {
+                script {
+                    echo "Checking if EKS cluster '$CLUSTER_NAME' exists..."
+                    def clusterExists = sh(
+                        script: "eksctl get cluster --region $AWS_REGION | grep -w $CLUSTER_NAME || true",
+                        returnStatus: true
+                    )
+
+                    if (clusterExists == 0) {
+                        echo "Cluster '$CLUSTER_NAME' already exists — skipping creation."
+                    } else {
+                        echo "Cluster not found — creating a new one..."
+                        sh """
+                        /usr/bin/env /usr/local/bin/eksctl create cluster \
+                            --name $CLUSTER_NAME \
+                            --region $AWS_REGION \
+                            --fargate
+                        """
+                    }
+                }
+
                 sh '''
-                echo "enetered hereraa pukka"
-                /usr/bin/env /usr/local/bin/eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --fargate
+                eksctl utils associate-iam-oidc-provider --cluster $CLUSTER_NAME --approve
                 '''
             }
         }
