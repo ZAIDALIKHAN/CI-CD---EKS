@@ -71,17 +71,23 @@ pipeline {
                     } else {
                         echo "Cluster not found — creating a new one..."
                         sh """
-                        /usr/bin/env /usr/local/bin/eksctl create cluster \
-                            --name $CLUSTER_NAME \
-                            --region $AWS_REGION \
-                            --fargate
+                        /usr/bin/env /usr/local/bin/eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --fargate
                         """
                     }
                 }
 
-                sh '''
-                eksctl utils associate-iam-oidc-provider --cluster $CLUSTER_NAME --approve
-                '''
+               sh '''
+               eksctl utils associate-iam-oidc-provider --cluster $CLUSTER_NAME --approve
+               aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
+               
+               if eksctl get fargateprofile --cluster $CLUSTER_NAME --region $AWS_REGION | grep -q 'alb-sample-app'; then
+                echo "Fargate profile 'alb-sample-app' already exists. Skipping creation."
+               else
+                echo "Creating Fargate profile 'alb-sample-app'..."
+                eksctl create fargateprofile --cluster $CLUSTER_NAME --region $AWS_REGION --name alb-sample-app --namespace game-2048
+               fi
+               '''
             }
         }
             
